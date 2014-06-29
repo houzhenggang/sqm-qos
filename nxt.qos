@@ -56,11 +56,11 @@ diffserv_nxt() {
 
 egress() {
 
-    CEIL=$UPLINK
-    EXPRESS=`expr $CEIL \* 30 / 100`
-    NORMAL=`expr $CEIL \* 50 / 100`
-    BULK=`expr $CEIL \* 20 / 100`
-    LQ="quantum `get_mtu $IFACE $CEIL`"
+    CEIL=`expr $UPLINK - 16`
+    EXPRESS=`expr $UPLINK \* 30 / 100`
+    NORMAL=`expr $UPLINK \* 65 / 100`
+    BULK=`expr $UPLINK \* 5 / 100`
+    LQ="quantum `get_mtu $IFACE $UPLINK`"
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 13
@@ -104,8 +104,8 @@ egress() {
 
 ingress() {
 
-    CEIL=$DOWNLINK
-    LQ="quantum `get_mtu $IFACE $CEIL`"
+    CEIL=`expr $DOWNLINK - 16`
+    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
