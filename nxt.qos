@@ -26,10 +26,26 @@ dc_nxt() {
 
 }
 
+sc_nxt() {
+
+    $TC filter add dev $1 protocol ip parent $2 prio $prio \
+    u32 match ip sport $3 0xffff classid $4
+    prio=$(($prio + 1))
+    $TC filter add dev $1 protocol ipv6 parent $2 prio $prio \
+    u32 match ip sport $3 0xffff classid $4
+    prio=$(($prio + 1))
+
+}
+
+reset_count() {
+
+    prio=1
+
+}
+
 diffserv_nxt() {
 
     interface=$1
-    prio=$2
 
     fc_nxt $interface 1:0 0x30 1:13 # AF12
     fc_nxt $interface 1:0 0x90 1:11 # AF42
@@ -85,7 +101,8 @@ egress() {
     `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
     `get_flows ${BULK}` ${EQDISC_OPTS}
 
-    diffserv_nxt $IFACE 1
+    reset_count
+    diffserv_nxt $IFACE
 
     dc_nxt $IFACE 1:0 20 1:12
     dc_nxt $IFACE 1:0 21 1:12
@@ -105,23 +122,45 @@ egress() {
 ingress() {
 
     CEIL=`expr $DOWNLINK - 16`
+    NORMAL=`expr $DOWNLINK \* 90 / 100`
+    BULK=`expr $DOWNLINK \* 10 / 100`
     LQ="quantum `get_mtu $IFACE $DOWNLINK`"
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
 
     $TC qdisc del dev $DEV root 2> /dev/null
-    $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 11
+    $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 12
 
     $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit \
     ceil ${CEIL}kbit `get_htb_adsll_string`
 
-    $TC class add dev $DEV parent 1:1 classid 1:11 htb $LQ rate ${CEIL}kbit \
+    $TC class add dev $DEV parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
     ceil ${CEIL}kbit prio 1 `get_htb_adsll_string`
+    $TC class add dev $DEV parent 1:1 classid 1:12 htb $LQ rate ${BULK}kbit \
+    ceil ${CEIL}kbit prio 2 `get_htb_adsll_string`
 
     $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
     `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1000` \
-    `get_flows ${CEIL}` ${IQDISC_OPTS}
+    `get_flows ${NORMAL}` ${IQDISC_OPTS}
+    $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1000` \
+    `get_flows ${BULK}` ${IQDISC_OPTS}
+
+    reset_count
+
+    sc_nxt $DEV 1:0 20 1:11
+    sc_nxt $DEV 1:0 21 1:11
+    sc_nxt $DEV 1:0 22 1:11
+    sc_nxt $DEV 1:0 25 1:11
+    sc_nxt $DEV 1:0 53 1:11
+    sc_nxt $DEV 1:0 80 1:11
+    sc_nxt $DEV 1:0 110 1:11
+    sc_nxt $DEV 1:0 123 1:11
+    sc_nxt $DEV 1:0 443 1:11
+    sc_nxt $DEV 1:0 465 1:11
+    sc_nxt $DEV 1:0 993 1:11
+    sc_nxt $DEV 1:0 995 1:11
 
     ifconfig $DEV up
 
