@@ -73,9 +73,9 @@ diffserv_nxt() {
 egress() {
 
     CEIL=`expr $UPLINK - 16`
+    NORMAL=`expr $UPLINK \* 50 / 100`
     NORMALBURST=`expr $UPLINK \* 80 / 100`
     BURSTTIME=50
-    NORMAL=`expr $UPLINK \* 50 / 100`
     NORMALT=`expr $UPLINK \* 90 / 100`
     BULK=`expr $UPLINK \* 10 / 100`
     MAXBULK=`expr $CEIL \* 80 / 100`
