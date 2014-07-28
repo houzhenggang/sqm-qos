@@ -75,7 +75,7 @@ egress() {
     CEIL=`expr $UPLINK - 16`
     NORMAL=`expr $UPLINK \* 70 / 100`
     NORMALBURST=`expr $UPLINK \* 90 / 100`
-    BURSTTIME=500
+    BURSTTIME=3000
     NORMALT=`expr $UPLINK \* 90 / 100`
     BULK=`expr $UPLINK \* 5 / 100`
     BULKT=`expr $UPLINK \* 10 / 100`
