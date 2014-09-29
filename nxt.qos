@@ -73,9 +73,9 @@ diffserv_nxt() {
 egress() {
 
     CEIL=`expr $UPLINK - 16`
-    NORMAL=`expr $UPLINK \* 90 / 100`
+    NORMAL=`expr $UPLINK \* 75 / 100`
     BULK=`expr $UPLINK \* 5 / 100`
-    MAXBULK=`expr $CEIL \* 80 / 100`
+    MAXBULK=`expr $CEIL \* 75 / 100`
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` hfsc default 12
@@ -101,7 +101,7 @@ egress() {
     dc_nxt $IFACE 1:0 20 1:11
     dc_nxt $IFACE 1:0 21 1:11
     dc_nxt $IFACE 1:0 22 1:11
-    dc_nxt $IFACE 1:0 25 1:12
+    dc_nxt $IFACE 1:0 25 1:11
     dc_nxt $IFACE 1:0 53 1:11
     dc_nxt $IFACE 1:0 80 1:11
     dc_nxt $IFACE 1:0 110 1:11
@@ -116,46 +116,51 @@ egress() {
 ingress() {
 
     CEIL=`expr $DOWNLINK - 16`
-    NORMAL=`expr $DOWNLINK \* 90 / 100`
+    EXPRESS=`expr $DOWNLINK \* 25 / 100`
+    NORMAL=`expr $DOWNLINK \* 50 / 100`
     BULK=`expr $DOWNLINK \* 5 / 100`
-    MAXBULK=`expr $CEIL \* 80 / 100`
-    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
+    MAXBULK=`expr $CEIL \* 75 / 100`
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
 
     $TC qdisc del dev $DEV root 2> /dev/null
-    $TC qdisc add dev $DEV root handle 1: `get_stab_string` hfsc default 12
+    $TC qdisc add dev $DEV root handle 1: `get_stab_string` hfsc default 13
 
     $TC class add dev $DEV parent 1: classid 1:1 hfsc sc rate ${CEIL}kbit \
     ul rate ${CEIL}kbit
 
-    $TC class add dev $DEV parent 1:1 classid 1:11 hfsc sc rate ${NORMAL}kbit \
+    $TC class add dev $DEV parent 1:1 classid 1:11 hfsc sc rate ${EXPRESS}kbit \
     ul rate ${CEIL}kbit
-    $TC class add dev $DEV parent 1:1 classid 1:12 hfsc sc rate ${BULK}kbit \
+    $TC class add dev $DEV parent 1:1 classid 1:12 hfsc sc rate ${NORMAL}kbit \
+    ul rate ${CEIL}kbit
+    $TC class add dev $DEV parent 1:1 classid 1:13 hfsc sc rate ${BULK}kbit \
     ul rate ${MAXBULK}kbit
 
     $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_flows ${EXPRESS}` ${IQDISC_OPTS}
+    $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
     `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1000` \
     `get_flows ${NORMAL}` ${IQDISC_OPTS}
-    $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
+    $TC qdisc add dev $DEV parent 1:13 handle 130: $QDISC `get_limit ${ILIMIT}` \
     `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1000` \
     `get_flows ${BULK}` ${IQDISC_OPTS}
 
     reset_count
 
-    sc_nxt $DEV 1:0 20 1:11
-    sc_nxt $DEV 1:0 21 1:11
+    sc_nxt $DEV 1:0 20 1:12
+    sc_nxt $DEV 1:0 21 1:12
     sc_nxt $DEV 1:0 22 1:11
-    sc_nxt $DEV 1:0 25 1:11
+    sc_nxt $DEV 1:0 25 1:12
     sc_nxt $DEV 1:0 53 1:11
-    sc_nxt $DEV 1:0 80 1:11
-    sc_nxt $DEV 1:0 110 1:11
-    sc_nxt $DEV 1:0 123 1:11
-    sc_nxt $DEV 1:0 443 1:11
-    sc_nxt $DEV 1:0 465 1:11
-    sc_nxt $DEV 1:0 993 1:11
-    sc_nxt $DEV 1:0 995 1:11
+    sc_nxt $DEV 1:0 80 1:12
+    sc_nxt $DEV 1:0 110 1:12
+    sc_nxt $DEV 1:0 123 1:12
+    sc_nxt $DEV 1:0 443 1:12
+    sc_nxt $DEV 1:0 465 1:12
+    sc_nxt $DEV 1:0 993 1:12
+    sc_nxt $DEV 1:0 995 1:12
 
     ifconfig $DEV up
 
