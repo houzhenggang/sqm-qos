@@ -135,10 +135,10 @@ ingress() {
     ul rate ${MAXQ}kbit
 
     $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1500` \
     `get_flows ${NORMAL}` ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1500` \
     `get_flows ${BULK}` ${IQDISC_OPTS}
 
     reset_count
