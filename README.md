@@ -1,7 +1,7 @@
 sqm-qos
 =======
 
-sqm-qos is the successor of qos-nxt and is built on similar principles. It is designed to run as part of the sqm package developped by the [CeroWRT project](https://github.com/dtaht).
+sqm-qos is the successor of qos-nxt and is built on similar principles. It is designed to run as part of the sqm package developped by the [CeroWRT](https://github.com/dtaht) project.
 
 ## Principles
 
