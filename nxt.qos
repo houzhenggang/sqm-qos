@@ -73,7 +73,7 @@ diffserv_nxt() {
 egress() {
 
     CEIL=`expr $UPLINK - 16`
-    NORMAL=`expr $UPLINK \* 50 / 100`
+    NORMAL=`expr $UPLINK \* 60 / 100`
     BULK=`expr $UPLINK \* 20 / 100`
     MAXQ=`expr $CEIL \* 95 / 100`
 
@@ -138,7 +138,7 @@ ingress() {
     `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1514` \
     `get_flows ${NORMAL}` ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 600` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1514` \
     `get_flows ${BULK}` ${IQDISC_OPTS}
 
     reset_count
