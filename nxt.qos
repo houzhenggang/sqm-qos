@@ -75,7 +75,7 @@ egress() {
     CEIL=`expr $UPLINK - 16`
     NORMAL=`expr $UPLINK \* 50 / 100`
     BULK=`expr $UPLINK \* 30 / 100`
-    MAXQ=`expr $CEIL \* 90 / 100`
+    MAXQ=`expr $CEIL \* 95 / 100`
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` hfsc default 12
@@ -89,10 +89,10 @@ egress() {
     ul rate ${MAXQ}kbit
 
     $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC `get_limit ${ELIMIT}` \
-    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1500` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1514` \
     `get_flows ${NORMAL}` ${EQDISC_OPTS}
     $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC `get_limit ${ELIMIT}` \
-    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1500` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1514` \
     `get_flows ${BULK}` ${EQDISC_OPTS}
 
     reset_count
@@ -118,7 +118,7 @@ ingress() {
     CEIL=`expr $DOWNLINK - 16`
     NORMAL=`expr $DOWNLINK \* 50 / 100`
     BULK=`expr $DOWNLINK \* 30 / 100`
-    MAXQ=`expr $CEIL \* 90 / 100`
+    MAXQ=`expr $CEIL \* 95 / 100`
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress
@@ -135,10 +135,10 @@ ingress() {
     ul rate ${MAXQ}kbit
 
     $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1500` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1514` \
     `get_flows ${NORMAL}` ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1500` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1514` \
     `get_flows ${BULK}` ${IQDISC_OPTS}
 
     reset_count
