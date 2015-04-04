@@ -89,10 +89,10 @@ egress() {
     ul rate ${MAXQ}kbit
 
     $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC `get_limit ${ELIMIT}` \
-    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1500` \
     `get_flows ${NORMAL}` ${EQDISC_OPTS}
     $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC `get_limit ${ELIMIT}` \
-    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1500` \
     `get_flows ${BULK}` ${EQDISC_OPTS}
 
     reset_count
