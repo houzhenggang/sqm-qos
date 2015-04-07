@@ -87,10 +87,10 @@ ingress() {
     $TC qdisc add dev $IFACE handle ffff: ingress
 
     $TC qdisc del dev $DEV root 2> /dev/null
-    $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 11
+    $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 12
 
     $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit \
-    ceil ${CEIL}kbit
+    ceil ${CEIL}kbit `get_htb_adsll_string`
 
     $TC class add dev $DEV parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
     ceil ${MAXQ}kbit prio 0 `get_htb_adsll_string`
