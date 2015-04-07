@@ -38,7 +38,6 @@ Both packages are included as part of *CeroWRT* and can be included in a custom 
 
 ```bash
 scp nxt.qos root@router:/usr/lib/sqm/
-scp 10-qos root@router:/etc/hotplug.d/iface/
 ```
 
 2) Configure sqm as per the followig [guide](http://www.bufferbloat.net/projects/cerowrt/wiki/Setting_up_SQM_for_CeroWrt_310). Set the queue discipline to *nxt.qos*.
