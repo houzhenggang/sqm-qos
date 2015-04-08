@@ -110,7 +110,7 @@ ingress() {
     ifconfig $DEV up
 
     $TC filter add dev $IFACE parent ffff: protocol all prio 1 u32 \
-    match u32 0 0 flowid 1:1 action connmark action mirred egress redirect dev $DEV
+    match u32 0 0 action connmark action mirred egress redirect dev $DEV
 
 }
 
