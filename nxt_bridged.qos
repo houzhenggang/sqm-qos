@@ -7,10 +7,10 @@
 dc_nxt() {
 
     $TC filter add dev $1 protocol ip parent 1:0 prio $prio \
-    u32 match ip dport $3 0xffff classid $4
+    u32 match ip dport $2 0xffff classid $3
     prio=$(($prio + 1))
     $TC filter add dev $1 protocol ipv6 parent 1:0 prio $prio \
-    u32 match ip dport $3 0xffff classid $4
+    u32 match ip dport $2 0xffff classid $3
     prio=$(($prio + 1))
 
 }
@@ -18,10 +18,10 @@ dc_nxt() {
 sc_nxt() {
 
     $TC filter add dev $1 protocol ip parent 1:0 prio $prio \
-    u32 match ip sport $3 0xffff classid $4
+    u32 match ip sport $2 0xffff classid $3
     prio=$(($prio + 1))
     $TC filter add dev $1 protocol ipv6 parent 1:0 prio $prio \
-    u32 match ip sport $3 0xffff classid $4
+    u32 match ip sport $2 0xffff classid $3
     prio=$(($prio + 1))
 
 }
