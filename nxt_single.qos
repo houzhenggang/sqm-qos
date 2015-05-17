@@ -1,0 +1,74 @@
+#!/bin/sh
+
+# QoS Script version for CEROwrt.
+
+. /usr/lib/sqm/functions.sh
+
+egress() {
+
+    CEIL=`expr $UPLINK - 16`
+    LQ="quantum `get_mtu $IFACE $UPLINK`"
+
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 11
+
+    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit \
+    ceil ${CEIL}kbit `get_htb_adsll_string`
+
+    $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate ${CEIL}kbit \
+    ceil ${CEIL}kbit prio 0 `get_htb_adsll_string`
+
+    $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC `get_limit ${ELIMIT}` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
+    `get_flows ${CEIL}` ${EQDISC_OPTS}
+
+}
+
+ingress() {
+
+    CEIL=`expr $DOWNLINK - 16`
+    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
+
+    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+
+    $TC qdisc del dev $DEV root 2> /dev/null
+    $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 11
+
+    $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit \
+    ceil ${CEIL}kbit `get_htb_adsll_string`
+
+    $TC class add dev $DEV parent 1:1 classid 1:11 htb $LQ rate ${CEIL}kbit \
+    ceil ${CEIL}kbit prio 0 `get_htb_adsll_string`
+
+    $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1514` \
+    `get_flows ${CEIL}` ${IQDISC_OPTS}
+
+    ifconfig $DEV up
+
+    $TC filter add dev $IFACE parent ffff: protocol all prio 1 u32 \
+    match u32 0 0 action mirred egress redirect dev $DEV
+
+}
+
+do_modules
+
+if [ "$UPLINK" -ne 0 ];
+then
+    egress
+    logger "egress shaping activated"
+else
+    logger "egress shaping deactivated"
+    tc qdisc del dev $IFACE root 2> /dev/null
+fi
+
+if [ "$DOWNLINK" -ne 0 ];
+then
+    ingress
+    logger "ingress shaping activated"
+else
+    logger "ingress shaping deactivated"
+    tc qdisc del dev $DEV root 2> /dev/null
+    tc qdisc del dev $IFACE ingress 2> /dev/null
+fi
