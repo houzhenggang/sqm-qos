@@ -7,7 +7,7 @@ sqm-qos is the successor of qos-nxt and is built on similar principles. It is de
 
 sqm-qos leverages *HTB* and *fq_codel* to define two queues on egress and ingress: Priority and Regular. Priority is guaranteed 50% of the total bandwidth while the Regular queue is guaranteed 30%. Both queues are capped to a maximum of 90% of the total bandwidth.
 
-Packets are allocated a traffic class based on their source or destination ports.
+Packets are allocated a traffic class based on their source or destination ports. The following services are given priority:
 
 - SSH
 - SMTP
