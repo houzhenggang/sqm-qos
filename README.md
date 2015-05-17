@@ -5,10 +5,9 @@ sqm-qos is the successor of qos-nxt and is built on similar principles. It is de
 
 ## Principles
 
-sqm-qos leverages *HFSC* and *fq_codel* to define two queues on egress and ingress: Priority and Regular. Priority is guaranteed 50% of the total bandwidth while the Regular queue is guaranteed 30%. Both queues are capped to a maximum of 90% of the total bandwidth.
+sqm-qos leverages *HTB* and *fq_codel* to define two queues on egress and ingress: Priority and Regular. Priority is guaranteed 50% of the total bandwidth while the Regular queue is guaranteed 30%. Both queues are capped to a maximum of 90% of the total bandwidth.
 
-Packets are allocated a traffic class based on their *DSCP* flag as well as their source or destination ports. 
-Currently, services given priority are as follow (please note that the *DSCP* flags take precedence if set):
+Packets are allocated a traffic class based on their source or destination ports.
 
 - SSH
 - SMTP
@@ -22,6 +21,8 @@ Currently, services given priority are as follow (please note that the *DSCP* fl
 - IMAPS
 - POP3
 - POP3S
+
+The traffic shaping scripts exist in two variants Routed (nxt_routed.qos) and Bridged (nxt_bridged.qos). The Routed variant makes use of iptables and connmark (ingress included with act_connmark), while the Bridged variant makes only use of tc and u32 filtering. Where applicable the Routed variant should be preferred. The bridged variant was developped, as its name suggest, for use in transparent bridge setup.
 
 ## Prerequisites
 
@@ -37,7 +38,7 @@ Both packages are included as part of *CeroWRT* and can be included in a custom 
 1) Upload to router with:
 
 ```bash
-scp nxt.qos root@router:/usr/lib/sqm/
+scp nxt_routed.qos root@router:/usr/lib/sqm/
 ```
 
 2) Configure sqm as per the followig [guide](http://www.bufferbloat.net/projects/cerowrt/wiki/Setting_up_SQM_for_CeroWrt_310). Set the queue discipline to *nxt.qos*.
