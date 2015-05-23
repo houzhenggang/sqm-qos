@@ -40,17 +40,16 @@ ipt_setup() {
 
 egress() {
 
-    CEIL=`expr $UPLINK - 16`
     NORMAL=`expr $UPLINK \* 50 / 100`
     BULK=`expr $UPLINK \* 30 / 100`
-    MAXQ=`expr $CEIL \* 90 / 100`
+    MAXQ=`expr $UPLINK \* 90 / 100`
     LQ="quantum `get_mtu $IFACE $UPLINK`"
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
 
-    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit \
-    ceil ${CEIL}kbit `get_htb_adsll_string`
+    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${UPLINK}kbit \
+    ceil ${UPLINK}kbit `get_htb_adsll_string`
 
     $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
     ceil ${MAXQ}kbit prio 0 `get_htb_adsll_string`
@@ -63,20 +62,19 @@ egress() {
     $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC `get_limit ${ELIMIT}` \
     `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
     `get_flows ${BULK}` ${EQDISC_OPTS}
-    
+
     $TC filter add dev $IFACE parent 1:0 protocol all prio 1 u32 \
     match mark 0x01 0xff classid 1:11
     $TC filter add dev $IFACE parent 1:0 protocol all prio 2 u32 \
     match mark 0x02 0xff classid 1:12
-    
+
 }
 
 ingress() {
 
-    CEIL=`expr $DOWNLINK - 16`
     NORMAL=`expr $DOWNLINK \* 50 / 100`
     BULK=`expr $DOWNLINK \* 30 / 100`
-    MAXQ=`expr $CEIL \* 95 / 100`
+    MAXQ=`expr $DOWNLINK \* 95 / 100`
     LQ="quantum `get_mtu $IFACE $DOWNLINK`"
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
@@ -85,8 +83,8 @@ ingress() {
     $TC qdisc del dev $DEV root 2> /dev/null
     $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 12
 
-    $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${CEIL}kbit \
-    ceil ${CEIL}kbit `get_htb_adsll_string`
+    $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit \
+    ceil ${DOWNLINK}kbit `get_htb_adsll_string`
 
     $TC class add dev $DEV parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
     ceil ${MAXQ}kbit prio 0 `get_htb_adsll_string`
