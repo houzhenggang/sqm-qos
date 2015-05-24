@@ -64,9 +64,9 @@ egress() {
     `get_flows ${BULK}` ${EQDISC_OPTS}
 
     $TC filter add dev $IFACE parent 1:0 protocol all prio 1 u32 \
-    match mark 0x01 0xff classid 1:11
+    match mark 0x01 0xff flowid 1:11
     $TC filter add dev $IFACE parent 1:0 protocol all prio 2 u32 \
-    match mark 0x02 0xff classid 1:12
+    match mark 0x02 0xff flowid 1:12
 
 }
 
@@ -99,9 +99,9 @@ ingress() {
     `get_flows ${BULK}` ${IQDISC_OPTS}
 
     $TC filter add dev $DEV parent 1:0 protocol all prio 1 u32 \
-    match mark 0x01 0xff classid 1:11
+    match mark 0x01 0xff flowid 1:11
     $TC filter add dev $DEV parent 1:0 protocol all prio 2 u32 \
-    match mark 0x02 0xff classid 1:12
+    match mark 0x02 0xff flowid 1:12
 
     ifconfig $DEV up
 
