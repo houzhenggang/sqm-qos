@@ -40,38 +40,6 @@ ipt_setup() {
 
 egress() {
 
-    NORMAL=`expr $DOWNLINK \* 50 / 100`
-    BULK=`expr $DOWNLINK \* 30 / 100`
-    MAXQ=`expr $DOWNLINK \* 90 / 100`
-    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
-
-    $TC qdisc del dev $IFACE root 2> /dev/null
-    $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
-
-    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit \
-    ceil ${DOWNLINK}kbit `get_htb_adsll_string`
-
-    $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
-    ceil ${MAXQ}kbit prio 0 `get_htb_adsll_string`
-    $TC class add dev $IFACE parent 1:1 classid 1:12 htb $LQ rate ${BULK}kbit \
-    ceil ${MAXQ}kbit prio 1 `get_htb_adsll_string`
-
-    $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
-    `get_flows ${NORMAL}` ${IQDISC_OPTS}
-    $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
-    `get_flows ${BULK}` ${IQDISC_OPTS}
-
-    $TC filter add dev $IFACE parent 1:0 protocol all prio 1 u32 \
-    match mark 0x01 0xff flowid 1:11
-    $TC filter add dev $IFACE parent 1:0 protocol all prio 2 u32 \
-    match mark 0x02 0xff flowid 1:12
-
-}
-
-ingress() {
-
     NORMAL=`expr $UPLINK \* 50 / 100`
     BULK=`expr $UPLINK \* 30 / 100`
     MAXQ=`expr $UPLINK \* 95 / 100`
@@ -110,25 +78,57 @@ ingress() {
 
 }
 
+ingress() {
+
+    NORMAL=`expr $DOWNLINK \* 50 / 100`
+    BULK=`expr $DOWNLINK \* 30 / 100`
+    MAXQ=`expr $DOWNLINK \* 90 / 100`
+    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
+
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
+
+    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit \
+    ceil ${DOWNLINK}kbit `get_htb_adsll_string`
+
+    $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
+    ceil ${MAXQ}kbit prio 0 `get_htb_adsll_string`
+    $TC class add dev $IFACE parent 1:1 classid 1:12 htb $LQ rate ${BULK}kbit \
+    ceil ${MAXQ}kbit prio 1 `get_htb_adsll_string`
+
+    $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_flows ${NORMAL}` ${IQDISC_OPTS}
+    $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_flows ${BULK}` ${IQDISC_OPTS}
+
+    $TC filter add dev $IFACE parent 1:0 protocol all prio 1 u32 \
+    match mark 0x01 0xff flowid 1:11
+    $TC filter add dev $IFACE parent 1:0 protocol all prio 2 u32 \
+    match mark 0x02 0xff flowid 1:12
+
+}
+
 do_modules
 extra_modules
 ipt_setup
 
 if [ "$DOWNLINK" -ne 0 ];
 then
-    egress
-    logger "egress shaping activated"
+    ingress
+    logger "ingress shaping activated"
 else
-    logger "egress shaping deactivated"
+    logger "ingress shaping deactivated"
     tc qdisc del dev $IFACE root 2> /dev/null
 fi
 
 if [ "$UPLINK" -ne 0 ];
 then
-    ingress
-    logger "ingress shaping activated"
+    egress
+    logger "egress shaping activated"
 else
-    logger "ingress shaping deactivated"
+    logger "egress shaping deactivated"
     tc qdisc del dev $DEV root 2> /dev/null
     tc qdisc del dev $IFACE ingress 2> /dev/null
 fi
