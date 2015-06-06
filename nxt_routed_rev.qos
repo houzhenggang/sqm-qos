@@ -1,0 +1,134 @@
+#!/bin/sh
+
+# QoS Script version for CEROwrt.
+
+. /usr/lib/sqm/functions.sh
+
+extra_modules() {
+
+    insmod act_connmark
+
+}
+
+ipt_setup() {
+
+    ipt -t mangle -F QOS_MARK_${IFACE}
+    ipt -t mangle -X QOS_MARK_${IFACE}
+    ipt -t mangle -N QOS_MARK_${IFACE}
+
+    ipt -t mangle -F QOS_RULES_${IFACE}
+    ipt -t mangle -X QOS_RULES_${IFACE}
+    ipt -t mangle -N QOS_RULES_${IFACE}
+
+    ipt -t mangle -A POSTROUTING -o $IFACE -g QOS_MARK_${IFACE}
+
+    ipt -t mangle -A QOS_MARK_${IFACE} -j CONNMARK \
+    --restore-mark --nfmask 0xff --ctmask 0xff
+    ipt -t mangle -A QOS_MARK_${IFACE} -m mark --mark 0x00/0xff -j QOS_RULES_${IFACE}
+
+    ipt -t mangle -A QOS_RULES_${IFACE} -p tcp -m multiport \
+    --sports 20,21,22,25,80,110,443,465,993,995 -j MARK --set-mark 0x01/0xff
+    ipt -t mangle -A QOS_RULES_${IFACE} -p udp -m multiport \
+    --sports 53,123 -j MARK --set-mark 0x01/0xff
+    ipt -t mangle -A QOS_RULES_${IFACE} -p icmp -j MARK --set-mark 0x01/0xff
+    ipt -t mangle -A QOS_RULES_${IFACE} -m mark --mark 0x00/0xff \
+    -j MARK --set-mark 0x02/0xff
+    ipt -t mangle -A QOS_RULES_${IFACE} -j CONNMARK \
+    --save-mark --nfmask 0xff --ctmask 0xff
+
+}
+
+egress() {
+
+    NORMAL=`expr $DOWNLINK \* 50 / 100`
+    BULK=`expr $DOWNLINK \* 30 / 100`
+    MAXQ=`expr $DOWNLINK \* 90 / 100`
+    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
+
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
+
+    $TC class add dev $IFACE parent 1: classid 1:1 htb $LQ rate ${DOWNLINK}kbit \
+    ceil ${DOWNLINK}kbit `get_htb_adsll_string`
+
+    $TC class add dev $IFACE parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
+    ceil ${MAXQ}kbit prio 0 `get_htb_adsll_string`
+    $TC class add dev $IFACE parent 1:1 classid 1:12 htb $LQ rate ${BULK}kbit \
+    ceil ${MAXQ}kbit prio 1 `get_htb_adsll_string`
+
+    $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_flows ${NORMAL}` ${IQDISC_OPTS}
+    $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_flows ${BULK}` ${IQDISC_OPTS}
+
+    $TC filter add dev $IFACE parent 1:0 protocol all prio 1 u32 \
+    match mark 0x01 0xff flowid 1:11
+    $TC filter add dev $IFACE parent 1:0 protocol all prio 2 u32 \
+    match mark 0x02 0xff flowid 1:12
+
+}
+
+ingress() {
+
+    NORMAL=`expr $UPLINK \* 50 / 100`
+    BULK=`expr $UPLINK \* 30 / 100`
+    MAXQ=`expr $UPLINK \* 95 / 100`
+    LQ="quantum `get_mtu $IFACE $UPLINK`"
+
+    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+
+    $TC qdisc del dev $DEV root 2> /dev/null
+    $TC qdisc add dev $DEV root handle 1: `get_stab_string` htb default 12
+
+    $TC class add dev $DEV parent 1: classid 1:1 htb $LQ rate ${UPLINK}kbit \
+    ceil ${UPLINK}kbit `get_htb_adsll_string`
+
+    $TC class add dev $DEV parent 1:1 classid 1:11 htb $LQ rate ${NORMAL}kbit \
+    ceil ${MAXQ}kbit prio 0 `get_htb_adsll_string`
+    $TC class add dev $DEV parent 1:1 classid 1:12 htb $LQ rate ${BULK}kbit \
+    ceil ${MAXQ}kbit prio 1 `get_htb_adsll_string`
+
+    $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC `get_limit ${ELIMIT}` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1514` \
+    `get_flows ${NORMAL}` ${EQDISC_OPTS}
+    $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ELIMIT}` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 1514` \
+    `get_flows ${BULK}` ${EQDISC_OPTS}
+
+    $TC filter add dev $DEV parent 1:0 protocol all prio 1 u32 \
+    match mark 0x01 0xff flowid 1:11
+    $TC filter add dev $DEV parent 1:0 protocol all prio 2 u32 \
+    match mark 0x02 0xff flowid 1:12
+
+    ifconfig $DEV up
+
+    $TC filter add dev $IFACE parent ffff: protocol all prio 1 u32 \
+    match u32 0 0 action connmark action mirred egress redirect dev $DEV
+
+}
+
+do_modules
+extra_modules
+ipt_setup
+
+if [ "$DOWNLINK" -ne 0 ];
+then
+    egress
+    logger "egress shaping activated"
+else
+    logger "egress shaping deactivated"
+    tc qdisc del dev $IFACE root 2> /dev/null
+fi
+
+if [ "$UPLINK" -ne 0 ];
+then
+    ingress
+    logger "ingress shaping activated"
+else
+    logger "ingress shaping deactivated"
+    tc qdisc del dev $DEV root 2> /dev/null
+    tc qdisc del dev $IFACE ingress 2> /dev/null
+fi
