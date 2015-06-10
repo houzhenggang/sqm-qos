@@ -6,7 +6,7 @@
 
 egress() {
 
-    LQ="quantum `get_mtu $IFACE $UPLINK`"
+    LQ=""
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 1
@@ -22,7 +22,7 @@ egress() {
 
 ingress() {
 
-    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
+    LQ=""
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress

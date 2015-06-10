@@ -37,7 +37,7 @@ egress() {
     NORMAL=`expr $UPLINK \* 50 / 100`
     BULK=`expr $UPLINK \* 30 / 100`
     MAXQ=`expr $UPLINK \* 90 / 100`
-    LQ="quantum `get_mtu $IFACE $UPLINK`"
+    LQ=""
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: `get_stab_string` htb default 12
@@ -79,7 +79,7 @@ ingress() {
     NORMAL=`expr $DOWNLINK \* 50 / 100`
     BULK=`expr $DOWNLINK \* 30 / 100`
     MAXQ=`expr $DOWNLINK \* 95 / 100`
-    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
+    LQ=""
 
     $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
     $TC qdisc add dev $IFACE handle ffff: ingress

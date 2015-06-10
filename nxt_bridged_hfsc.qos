@@ -1,0 +1,146 @@
+#!/bin/sh
+
+# QoS Script version for CEROwrt.
+
+. /usr/lib/sqm/functions.sh
+
+dc_nxt() {
+
+    $TC filter add dev $1 protocol ip parent 1:0 prio $prio \
+    u32 match ip dport $2 0xffff flowid $3
+    prio=$(($prio + 1))
+    $TC filter add dev $1 protocol ipv6 parent 1:0 prio $prio \
+    u32 match ip dport $2 0xffff flowid $3
+    prio=$(($prio + 1))
+
+}
+
+sc_nxt() {
+
+    $TC filter add dev $1 protocol ip parent 1:0 prio $prio \
+    u32 match ip sport $2 0xffff flowid $3
+    prio=$(($prio + 1))
+    $TC filter add dev $1 protocol ipv6 parent 1:0 prio $prio \
+    u32 match ip sport $2 0xffff flowid $3
+    prio=$(($prio + 1))
+
+}
+
+reset_count() {
+
+    prio=1
+
+}
+
+egress() {
+
+    NORMAL=`expr $UPLINK \* 50 / 100`
+    BULK=`expr $UPLINK \* 30 / 100`
+    MAXQ=`expr $UPLINK \* 90 / 100`
+    LQ="quantum `get_mtu $IFACE $UPLINK`"
+
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    $TC qdisc add dev $IFACE root handle 1: hfsc default 12
+
+    $TC class add dev $IFACE parent 1: classid 1:1 hfsc  sc rate ${UPLINK}kbit \
+    ul rate ${UPLINK}kbit
+
+    $TC class add dev $IFACE parent 1:1 classid 1:11 hfsc sc rate ${NORMAL}kbit \
+    ul rate ${MAXQ}kbit
+    $TC class add dev $IFACE parent 1:1 classid 1:12 hfsc sc rate ${BULK}kbit \
+    ul rate ${MAXQ}kbit
+
+    $TC qdisc add dev $IFACE parent 1:11 handle 110: $QDISC `get_limit ${ELIMIT}` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
+    `get_flows ${NORMAL}` ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE parent 1:12 handle 120: $QDISC `get_limit ${ELIMIT}` \
+    `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
+    `get_flows ${BULK}` ${EQDISC_OPTS}
+
+    reset_count
+
+    dc_nxt $IFACE 20 1:11
+    dc_nxt $IFACE 21 1:11
+    dc_nxt $IFACE 22 1:11
+    dc_nxt $IFACE 25 1:11
+    dc_nxt $IFACE 53 1:11
+    dc_nxt $IFACE 80 1:11
+    dc_nxt $IFACE 110 1:11
+    dc_nxt $IFACE 123 1:11
+    dc_nxt $IFACE 443 1:11
+    dc_nxt $IFACE 465 1:11
+    dc_nxt $IFACE 993 1:11
+    dc_nxt $IFACE 995 1:11
+
+}
+
+ingress() {
+
+    NORMAL=`expr $DOWNLINK \* 50 / 100`
+    BULK=`expr $DOWNLINK \* 30 / 100`
+    MAXQ=`expr $DOWNLINK \* 95 / 100`
+    LQ="quantum `get_mtu $IFACE $DOWNLINK`"
+
+    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+
+    $TC qdisc del dev $DEV root 2> /dev/null
+    $TC qdisc add dev $DEV root handle 1: hfsc default 12
+
+    $TC class add dev $DEV parent 1: classid 1:1 hfsc sc rate ${DOWNLINK}kbit \
+    ul rate ${DOWNLINK}kbit `get_htb_adsll_string`
+
+    $TC class add dev $DEV parent 1:1 classid 1:11 hfsc sc rate ${NORMAL}kbit \
+    ul rate ${MAXQ}kbit
+    $TC class add dev $DEV parent 1:1 classid 1:12 hfsc sc rate ${BULK}kbit \
+    ul rate ${MAXQ}kbit
+
+    $TC qdisc add dev $DEV parent 1:11 handle 110: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1514` \
+    `get_flows ${NORMAL}` ${IQDISC_OPTS}
+    $TC qdisc add dev $DEV parent 1:12 handle 120: $QDISC `get_limit ${ILIMIT}` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1514` \
+    `get_flows ${BULK}` ${IQDISC_OPTS}
+
+    reset_count
+
+    sc_nxt $DEV 20 1:11
+    sc_nxt $DEV 21 1:11
+    sc_nxt $DEV 22 1:11
+    sc_nxt $DEV 25 1:11
+    sc_nxt $DEV 53 1:11
+    sc_nxt $DEV 80 1:11
+    sc_nxt $DEV 110 1:11
+    sc_nxt $DEV 123 1:11
+    sc_nxt $DEV 443 1:11
+    sc_nxt $DEV 465 1:11
+    sc_nxt $DEV 993 1:11
+    sc_nxt $DEV 995 1:11
+
+    ifconfig $DEV up
+
+    $TC filter add dev $IFACE parent ffff: protocol all prio 1 u32 \
+    match u32 0 0 action mirred egress redirect dev $DEV
+
+}
+
+do_modules
+
+if [ "$UPLINK" -ne 0 ];
+then
+    egress
+    logger "egress shaping activated"
+else
+    logger "egress shaping deactivated"
+    tc qdisc del dev $IFACE root 2> /dev/null
+fi
+
+if [ "$DOWNLINK" -ne 0 ];
+then
+    ingress
+    logger "ingress shaping activated"
+else
+    logger "ingress shaping deactivated"
+    tc qdisc del dev $DEV root 2> /dev/null
+    tc qdisc del dev $IFACE ingress 2> /dev/null
+fi
