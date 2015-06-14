@@ -59,7 +59,7 @@ egress() {
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: hfsc default 12
 
-    $TC class add dev $IFACE parent 1: classid 1:1 hfsc  sc rate ${UPLINK}kbit \
+    $TC class add dev $IFACE parent 1: classid 1:1 hfsc sc rate ${UPLINK}kbit \
     ul rate ${UPLINK}kbit
 
     $TC class add dev $IFACE parent 1:1 classid 1:11 hfsc sc rate ${NORMAL}kbit \
