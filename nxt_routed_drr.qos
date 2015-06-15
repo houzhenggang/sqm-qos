@@ -59,8 +59,8 @@ egress() {
     ceil ${UPLINK}kbit
 
     $TC qdisc add dev $IFACE parent 1:1 handle 2: drr
-    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 900`
-    $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 300`
+    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 3000`
+    $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 1500`
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
     `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 300` \
@@ -90,14 +90,14 @@ ingress() {
     ceil ${DOWNLINK}kbit
 
     $TC qdisc add dev $DEV parent 1:1 handle 2: drr
-    $TC class add dev $DEV parent 2: classid 2:1 drr `get_quantum 9000`
+    $TC class add dev $DEV parent 2: classid 2:1 drr `get_quantum 12000`
     $TC class add dev $DEV parent 2: classid 2:2 drr `get_quantum 6000`
 
     $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1500` \
     `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 2:2 handle 22: $QDISC `get_limit ${ILIMIT}` \
-    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 300` \
+    `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1500` \
     `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
 
     $TC filter add dev $DEV parent 2:0 protocol all prio 1 u32 \
