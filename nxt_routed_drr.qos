@@ -57,8 +57,8 @@ egress() {
     burst 1520 latency 100ms
 
     $TC qdisc add dev $IFACE parent 1: handle 2: drr
-    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 1520`
-    $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 760`
+    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 3040`
+    $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 1520`
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
     `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 380` \
