@@ -59,7 +59,7 @@ egress() {
     ceil ${UPLINK}kbit
 
     $TC qdisc add dev $IFACE parent 1:1 handle 2: drr
-    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 760`
+    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 1140`
     $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 760`
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
