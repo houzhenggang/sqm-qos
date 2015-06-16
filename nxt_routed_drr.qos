@@ -53,13 +53,11 @@ ipt_setup() {
 egress() {
 
     $TC qdisc del dev $IFACE root 2> /dev/null
-    $TC qdisc add dev $IFACE root handle 1: htb default 1
+    $TC qdisc add dev $IFACE root handle 1: tbf rate ${UPLINK}kbit \
+    burst 1520 latency 100ms
 
-    $TC class add dev $IFACE parent 1: classid 1:1 htb rate ${UPLINK}kbit \
-    ceil ${UPLINK}kbit
-
-    $TC qdisc add dev $IFACE parent 1:1 handle 2: drr
-    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 1140`
+    $TC qdisc add dev $IFACE parent 1: handle 2: drr
+    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 1520`
     $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 760`
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
@@ -84,12 +82,10 @@ ingress() {
     $TC qdisc add dev $IFACE handle ffff: ingress
 
     $TC qdisc del dev $DEV root 2> /dev/null
-    $TC qdisc add dev $DEV root handle 1: htb default 1
+    $TC qdisc add dev $DEV root handle 1: tbf rate ${DOWNLINK}kbit \
+    burst 1520 latency 100ms
 
-    $TC class add dev $DEV parent 1: classid 1:1 htb rate ${DOWNLINK}kbit \
-    ceil ${DOWNLINK}kbit
-
-    $TC qdisc add dev $DEV parent 1:1 handle 2: drr
+    $TC qdisc add dev $DEV parent 1: handle 2: drr
     $TC class add dev $DEV parent 2: classid 2:1 drr `get_quantum 3040`
     $TC class add dev $DEV parent 2: classid 2:2 drr `get_quantum 1520`
 
