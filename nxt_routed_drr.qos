@@ -62,15 +62,23 @@ egress() {
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
     `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 380` \
-    `get_flows ${UPLINK}` ${EQDISC_OPTS}
+    flows 1024 ${EQDISC_OPTS}
     $TC qdisc add dev $IFACE parent 2:2 handle 22: $QDISC `get_limit ${ELIMIT}` \
     `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 380` \
-    `get_flows ${UPLINK}` ${EQDISC_OPTS}
+    flows 1024 ${EQDISC_OPTS}
+
+    $TC filter add dev $IFACE parent 21: handle 21 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 1024
+    $TC filter add dev $IFACE parent 22: handle 22 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 1024
 
     $TC filter add dev $IFACE parent 2:0 protocol all prio 1 u32 \
     match mark 0x01 0xff flowid 2:1
     $TC filter add dev $IFACE parent 2:0 protocol all prio 2 u32 \
     match mark 0x02 0xff flowid 2:2
+
     $TC filter add dev $IFACE parent 2:0 protocol all prio 3 u32 \
     match u32 0 0 flowid 2:2
 
@@ -91,15 +99,23 @@ ingress() {
 
     $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
     `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1520` \
-    `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
+    flows 2048 ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 2:2 handle 22: $QDISC `get_limit ${ILIMIT}` \
     `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1520` \
-    `get_flows ${DOWNLINK}` ${IQDISC_OPTS}
+    flows 2048 ${IQDISC_OPTS}
+
+    $TC filter add dev $DEV parent 21: handle 21 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 2048
+    $TC filter add dev $DEV parent 22: handle 22 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 2048
 
     $TC filter add dev $DEV parent 2:0 protocol all prio 1 u32 \
     match mark 0x01 0xff flowid 2:1
     $TC filter add dev $DEV parent 2:0 protocol all prio 2 u32 \
     match mark 0x02 0xff flowid 2:2
+
     $TC filter add dev $DEV parent 2:0 protocol all prio 3 u32 \
     match u32 0 0 flowid 2:2
 
