@@ -54,11 +54,11 @@ egress() {
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: tbf rate ${UPLINK}kbit \
-    burst 1520 latency 100ms
+    burst 1540 limit `expr $ELIMIT \* 1540`
 
     $TC qdisc add dev $IFACE parent 1: handle 2: drr
-    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 3040`
-    $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 1520`
+    $TC class add dev $IFACE parent 2: classid 2:1 drr `get_quantum 3080`
+    $TC class add dev $IFACE parent 2: classid 2:2 drr `get_quantum 1540`
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
     `get_target "${ETARGET}" ${UPLINK}` `get_ecn ${EECN}` `get_quantum 380` \
@@ -91,11 +91,11 @@ ingress() {
 
     $TC qdisc del dev $DEV root 2> /dev/null
     $TC qdisc add dev $DEV root handle 1: tbf rate ${DOWNLINK}kbit \
-    burst 1520 latency 100ms
+    burst 1540 limit `expr $ILIMIT \* 1540`
 
     $TC qdisc add dev $DEV parent 1: handle 2: drr
-    $TC class add dev $DEV parent 2: classid 2:1 drr `get_quantum 3040`
-    $TC class add dev $DEV parent 2: classid 2:2 drr `get_quantum 1520`
+    $TC class add dev $DEV parent 2: classid 2:1 drr `get_quantum 3080`
+    $TC class add dev $DEV parent 2: classid 2:2 drr `get_quantum 1540`
 
     $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
     `get_target "${ITARGET}" ${DOWNLINK}` `get_ecn ${IECN}` `get_quantum 1520` \
