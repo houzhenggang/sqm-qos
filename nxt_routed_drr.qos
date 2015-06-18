@@ -74,8 +74,8 @@ egress() {
     burst 1540 limit `expr $ELIMIT \* 1540`
 
     $TC qdisc add dev $IFACE parent 1: handle 2: drr
-    $TC class add dev $IFACE parent 2: classid 2:1 drr quantum 3080
-    $TC class add dev $IFACE parent 2: classid 2:2 drr quantum 1540
+    $TC class add dev $IFACE parent 2: classid 2:1 drr quantum 1540
+    $TC class add dev $IFACE parent 2: classid 2:2 drr quantum 770
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
     target 15ms `get_ecn ${EECN}` quantum 385 \
