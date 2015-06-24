@@ -57,15 +57,13 @@ egress() {
     burst 1540 limit `expr $ELIMIT \* 1540`
 
     $TC qdisc add dev $IFACE parent 1: handle 2: drr
-    $TC class add dev $IFACE parent 2: classid 2:1 drr quantum 770
-    $TC class add dev $IFACE parent 2: classid 2:2 drr quantum 385
+    $TC class add dev $IFACE parent 2: classid 2:1 drr quantum 1800
+    $TC class add dev $IFACE parent 2: classid 2:2 drr quantum 900
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
-    target 15ms `get_ecn ${EECN}` quantum 385 \
-    flows 16 ${EQDISC_OPTS}
+    target 15ms `get_ecn ${EECN}` quantum 300 flows 16 ${EQDISC_OPTS}
     $TC qdisc add dev $IFACE parent 2:2 handle 22: $QDISC `get_limit ${ELIMIT}` \
-    target 15ms `get_ecn ${EECN}` quantum 385 \
-    flows 16 ${EQDISC_OPTS}
+    target 15ms `get_ecn ${EECN}` quantum 300 flows 16 ${EQDISC_OPTS}
 
     reset_count
 
@@ -101,11 +99,9 @@ ingress() {
     $TC class add dev $DEV parent 2: classid 2:2 drr quantum 1540
 
     $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 \
-    flows 128 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 2:2 handle 22: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 \
-    flows 128 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
 
     reset_count
 
