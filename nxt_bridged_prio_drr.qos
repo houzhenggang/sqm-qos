@@ -81,7 +81,6 @@ egress() {
     reset_count
     dc_nxt $IFACE 2:0 53 2:1
     dc_nxt $IFACE 2:0 123 2:1
-    catchall $IFACE 2:0 3:0
 
     reset_count
     dc_nxt $IFACE 3:0 20 3:1
@@ -115,16 +114,15 @@ ingress() {
     $TC class add dev $DEV parent 3: classid 3:2 drr quantum 1540
 
     $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 flows 256 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 3:1 handle 31: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 flows 256 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 3:2 handle 32: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 flows 256 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
 
     reset_count
     sc_nxt $DEV 2:0 53 2:1
     sc_nxt $DEV 2:0 123 2:1
-    catchall $DEV 2:0 3:0
 
     reset_count
     sc_nxt $DEV 3:0 20 3:1

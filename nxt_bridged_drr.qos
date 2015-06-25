@@ -66,7 +66,6 @@ egress() {
     target 15ms `get_ecn ${EECN}` quantum 300 flows 16 ${EQDISC_OPTS}
 
     reset_count
-
     dc_nxt $IFACE 20 2:1
     dc_nxt $IFACE 21 2:1
     dc_nxt $IFACE 22 2:1
@@ -99,12 +98,11 @@ ingress() {
     $TC class add dev $DEV parent 2: classid 2:2 drr quantum 1540
 
     $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 flows 256 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 2:2 handle 22: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 flows 256 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
 
     reset_count
-
     sc_nxt $DEV 20 2:1
     sc_nxt $DEV 21 2:1
     sc_nxt $DEV 22 2:1

@@ -113,16 +113,16 @@ ingress() {
     $TC class add dev $DEV parent 2: classid 2:2 drr quantum 1540
 
     $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 flows 256 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
     $TC qdisc add dev $DEV parent 2:2 handle 22: $QDISC `get_limit ${ILIMIT}` \
-    target 5ms `get_ecn ${IECN}` quantum 1540 flows 256 ${IQDISC_OPTS}
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
 
     $TC filter add dev $DEV parent 21: handle 21 protocol all \
     flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
-    divisor 256
+    divisor 128
     $TC filter add dev $DEV parent 22: handle 22 protocol all \
     flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
-    divisor 256
+    divisor 128
 
     $TC filter add dev $DEV parent 2:0 protocol all prio 1 u32 \
     match mark 0x01 0xff flowid 2:1
