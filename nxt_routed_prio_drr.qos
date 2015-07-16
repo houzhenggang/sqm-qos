@@ -1,0 +1,185 @@
+#!/bin/sh
+
+. /usr/lib/sqm/functions.sh
+
+eth_setup() {
+
+    ethtool -K $IFACE gso off
+    ethtool -K $IFACE tso off
+    ethtool -K $IFACE ufo off
+    ethtool -K $IFACE gro off
+
+    if [ -e /sys/class/net/$IFACE/queues/tx-0/byte_queue_limits ]
+    then
+      for i in /sys/class/net/$IFACE/queues/tx-*/byte_queue_limits
+      do
+        echo 4620 > $i/limit_max
+      done
+    fi
+
+}
+
+
+dc_nxt() {
+
+    $TC filter add dev $1 protocol ip parent $2 prio $prio \
+    u32 match ip dport $3 0xffff flowid $4
+    prio=$(($prio + 1))
+    $TC filter add dev $1 protocol ipv6 parent $2 prio $prio \
+    u32 match ip dport $3 0xffff flowid $4
+    prio=$(($prio + 1))
+
+}
+
+sc_nxt() {
+
+    $TC filter add dev $1 protocol ip parent $2 prio $prio \
+    u32 match ip sport $3 0xffff flowid $4
+    prio=$(($prio + 1))
+    $TC filter add dev $1 protocol ipv6 parent $2 prio $prio \
+    u32 match ip sport $3 0xffff flowid $4
+    prio=$(($prio + 1))
+
+}
+
+catchall() {
+
+    $TC filter add dev $1 parent $2 protocol all prio $prio u32 \
+    match u32 0 0 flowid $3
+    prio=$(($prio + 1))
+
+}
+
+reset_count() {
+
+    prio=1
+
+}
+
+egress() {
+
+    $TC qdisc del dev $IFACE root 2> /dev/null
+    $TC qdisc add dev $IFACE root handle 1: tbf rate ${UPLINK}kbit \
+    burst 1540 limit `expr $ELIMIT \* 1540`
+
+    $TC qdisc add dev $IFACE parent 1: handle 2: prio bands 2 \
+    priomap 1 1 1 1 1 1 0 0 1 1 1 1 1 1 1 1
+
+    $TC qdisc add dev $IFACE parent 2:2 handle 3: drr
+    $TC class add dev $IFACE parent 3: classid 3:1 drr quantum 1540
+    $TC class add dev $IFACE parent 3: classid 3:2 drr quantum 1155
+
+    $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
+    target 10ms `get_ecn ${EECN}` quantum 385 flows 16 ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE parent 3:1 handle 31: $QDISC `get_limit ${ELIMIT}` \
+    target 15ms `get_ecn ${EECN}` quantum 385 flows 16 ${EQDISC_OPTS}
+    $TC qdisc add dev $IFACE parent 3:2 handle 32: $QDISC `get_limit ${ELIMIT}` \
+    target 15ms `get_ecn ${EECN}` quantum 385 flows 16 ${EQDISC_OPTS}
+
+    $TC filter add dev $IFACE parent 21: handle 21 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 16
+    $TC filter add dev $IFACE parent 31: handle 31 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 16
+    $TC filter add dev $IFACE parent 32: handle 32 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 16
+
+    reset_count
+    dc_nxt $IFACE 2:0 53 2:1
+    dc_nxt $IFACE 2:0 123 2:1
+
+    reset_count
+    dc_nxt $IFACE 3:0 20 3:1
+    dc_nxt $IFACE 3:0 21 3:1
+    dc_nxt $IFACE 3:0 22 3:1
+    dc_nxt $IFACE 3:0 25 3:1
+    dc_nxt $IFACE 3:0 80 3:1
+    dc_nxt $IFACE 3:0 110 3:1
+    dc_nxt $IFACE 3:0 443 3:1
+    dc_nxt $IFACE 3:0 465 3:1
+    dc_nxt $IFACE 3:0 993 3:1
+    dc_nxt $IFACE 3:0 995 3:1
+    catchall $IFACE 3:0 3:2
+
+}
+
+ingress() {
+
+    $TC qdisc del dev $IFACE handle ffff: ingress 2> /dev/null
+    $TC qdisc add dev $IFACE handle ffff: ingress
+
+    $TC qdisc del dev $DEV root 2> /dev/null
+    $TC qdisc add dev $DEV root handle 1: tbf rate ${DOWNLINK}kbit \
+    burst 1540 limit `expr $ILIMIT \* 1540`
+
+    $TC qdisc add dev $DEV parent 1: handle 2: prio bands 2 \
+    priomap 1 1 1 1 1 1 0 0 1 1 1 1 1 1 1 1
+
+    $TC qdisc add dev $DEV parent 2:2 handle 3: drr
+    $TC class add dev $DEV parent 3: classid 3:1 drr quantum 3080
+    $TC class add dev $DEV parent 3: classid 3:2 drr quantum 1540
+
+    $TC qdisc add dev $DEV parent 2:1 handle 21: $QDISC `get_limit ${ILIMIT}` \
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
+    $TC qdisc add dev $DEV parent 3:1 handle 31: $QDISC `get_limit ${ILIMIT}` \
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
+    $TC qdisc add dev $DEV parent 3:2 handle 32: $QDISC `get_limit ${ILIMIT}` \
+    target 5ms `get_ecn ${IECN}` quantum 1540 flows 128 ${IQDISC_OPTS}
+
+    $TC filter add dev $DEV parent 21: handle 21 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 128
+    $TC filter add dev $DEV parent 31: handle 31 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 128
+    $TC filter add dev $DEV parent 32: handle 32 protocol all \
+    flow hash keys nfct-src,nfct-dst,nfct-proto,nfct-proto-src,nfct-proto-dst \
+    divisor 128
+
+    reset_count
+    sc_nxt $DEV 2:0 53 2:1
+    sc_nxt $DEV 2:0 123 2:1
+
+    reset_count
+    sc_nxt $DEV 3:0 20 3:1
+    sc_nxt $DEV 3:0 21 3:1
+    sc_nxt $DEV 3:0 22 3:1
+    sc_nxt $DEV 3:0 25 3:1
+    sc_nxt $DEV 3:0 80 3:1
+    sc_nxt $DEV 3:0 110 3:1
+    sc_nxt $DEV 3:0 443 3:1
+    sc_nxt $DEV 3:0 465 3:1
+    sc_nxt $DEV 3:0 993 3:1
+    sc_nxt $DEV 3:0 995 3:1
+    catchall $DEV 3:0 3:2
+
+    ifconfig $DEV up
+
+    $TC filter add dev $IFACE parent ffff: protocol all prio 1 u32 \
+    match u32 0 0 action mirred egress redirect dev $DEV
+
+}
+
+do_modules
+eth_setup
+
+if [ "$UPLINK" -ne 0 ];
+then
+    egress
+    logger "egress shaping activated"
+else
+    logger "egress shaping deactivated"
+    tc qdisc del dev $IFACE root 2> /dev/null
+fi
+
+if [ "$DOWNLINK" -ne 0 ];
+then
+    ingress
+    logger "ingress shaping activated"
+else
+    logger "ingress shaping deactivated"
+    tc qdisc del dev $DEV root 2> /dev/null
+    tc qdisc del dev $IFACE ingress 2> /dev/null
+fi
