@@ -2,6 +2,23 @@
 
 . /usr/lib/sqm/functions.sh
 
+eth_setup() {
+
+    ethtool -K $IFACE gso off
+    ethtool -K $IFACE tso off
+    ethtool -K $IFACE ufo off
+    ethtool -K $IFACE gro off
+
+    if [ -e /sys/class/net/$IFACE/queues/tx-0/byte_queue_limits ]
+    then
+      for i in /sys/class/net/$IFACE/queues/tx-*/byte_queue_limits
+      do
+        echo 4620 > $i/limit_max
+      done
+    fi
+
+}
+
 ipt_setup() {
 
     ipt -t mangle -F QOS_MARK_${IFACE}
@@ -111,6 +128,7 @@ ingress() {
 }
 
 do_modules
+eth_setup
 ipt_setup
 
 if [ "$UPLINK" -ne 0 ];
