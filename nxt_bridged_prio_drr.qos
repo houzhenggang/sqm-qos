@@ -69,7 +69,7 @@ egress() {
 
     $TC qdisc add dev $IFACE parent 2:2 handle 3: drr
     $TC class add dev $IFACE parent 3: classid 3:1 drr quantum 1540
-    $TC class add dev $IFACE parent 3: classid 3:2 drr quantum 1155
+    $TC class add dev $IFACE parent 3: classid 3:2 drr quantum 1540
 
     $TC qdisc add dev $IFACE parent 2:1 handle 21: $QDISC `get_limit ${ELIMIT}` \
     target 10ms `get_ecn ${EECN}` quantum 385 flows 16 ${EQDISC_OPTS}
