@@ -53,7 +53,7 @@ ipt_setup() {
     --save-mark --nfmask 0xff --ctmask 0xff
 
     ipt -t mangle -A QOS_RECLASS_${IFACE} -p tcp -m connbytes \
-    --connbytes 50000: --connbytes-dir original --connbytes-mode bytes \
+    --connbytes 1125: --connbytes-dir original --connbytes-mode bytes \
     -j MARK --set-mark 0x02/0xff
     ipt -t mangle -A QOS_RECLASS_${IFACE} -m mark --mark 0x02/0xff -j CONNMARK \
     --save-mark --nfmask 0xff --ctmask 0xff
