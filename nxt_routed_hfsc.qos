@@ -64,7 +64,7 @@ egress() {
 
     BULK=`expr $UPLINK \* 40 / 100`
     NORMAL=`expr $UPLINK \* 60 / 100`
-    MAX=`expr $UPLINK \* 90 / 100`
+    MAX=`expr $UPLINK \* 95 / 100`
 
     $TC qdisc del dev $IFACE root 2> /dev/null
     $TC qdisc add dev $IFACE root handle 1: hfsc default 13
@@ -72,7 +72,7 @@ egress() {
     $TC class add dev $IFACE parent 1: classid 1:1 hfsc sc rate ${UPLINK}kbit \
     ul rate ${UPLINK}kbit
 
-    $TC class add dev $IFACE parent 1:1 classid 1:11 hfsc sc rate ${MAX}kbit
+    $TC class add dev $IFACE parent 1:1 classid 1:11 hfsc rt rate ${MAX}kbit
     $TC class add dev $IFACE parent 1:1 classid 1:12 hfsc ls rate ${NORMAL}kbit
     $TC class add dev $IFACE parent 1:1 classid 1:13 hfsc ls rate ${BULK}kbit
 
